@@ -1,0 +1,6 @@
+|ERROR|2018-02-24 10:40:40,521|Socket returns an error: ('Connection aborted.', ConnectionResetError(54, 'Connection reset by peer')).
+|ERROR|2018-02-24 10:41:54,840|Socket returns an error: ('Connection aborted.', ConnectionResetError(54, 'Connection reset by peer')).
+|ERROR|2018-02-24 11:54:41,206|Socket returns an error: ('Connection aborted.', ConnectionResetError(54, 'Connection reset by peer')).
+|ERROR|2018-02-25 08:42:03,041|Error in get_candles:
+|ERROR|2018-02-25 08:42:03,041|Illegal value for start: 2017-01-01.
+|ERROR|2018-04-17 11:18:43,279|Server reports an error: {'executed': False, 'error': 'Unauthorized'}.

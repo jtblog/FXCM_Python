@@ -1,0 +1,29 @@
+div.document {
+    min-width: 1000px;
+    width: 80vw;
+}
+
+.dataframe {
+    font-family: 'Consolas', 'Menlo', 'Deja Vu Sans Mono', 'Bitstream Vera Sans Mono', monospace;
+    font-size: 0.9em;
+    border: none;
+    border-collapse: collapse;
+}
+
+.dataframe tr:nth-of-type(2n) {
+    background: #e7e4e4;
+}
+.dataframe th, .dataframe td {
+    border: none;
+    font-weight: normal;
+    padding: 2px 4px;
+}
+
+.dataframe th {
+    background: #cfcfcf;
+ 
+}
+
+.prompt {
+    min-width: 10ex !important;
+}
