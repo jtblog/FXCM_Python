@@ -28,9 +28,6 @@ class SharedObjects:
         self.tradable_pairs = ['EUR/USD', 'USD/JPY', 'GBP/USD', 'USD/CHF', 
                   'AUD/USD', 'USD/CAD', 'NZD/USD', 'EUR/GBP', 
                   'USD/ZAR', 'ZAR/JPY', 'Copper']
-        self.discrepancies = {'EUR/USD': 0.57, 'USD/JPY': 55.5, 'GBP/USD': 0.63, 'USD/CHF': 0.49, 
-                  'AUD/USD': 0.35, 'USD/CAD': 0.68, 'NZD/USD': 0.33, 'EUR/GBP': 0.45, 
-                  'USD/ZAR': 7.3, 'ZAR/JPY': 4, 'Copper': 1.3}
         
     def get_status(self):
         status = ""
@@ -45,11 +42,10 @@ class SharedObjects:
     
     def historical_data(self, sym, pd, sz):
         data = self.connection.get_candles(sym, period=pd, number=sz)
-        dif = self.discrepancies.get(sym)
-        prices = list( ( data['askclose'] + data['bidclose'] / 2 ) - dif ) 
-        opens = list( (data['askopen'] + data['bidopen'] / 2) - dif )
-        highs = list( (data['askhigh'] + data['bidhigh'] / 2) - dif )
-        lows = list( (data['asklow'] + data['bidlow'] / 2) - dif )
+        prices = list(  ( data['askclose'] + data['bidclose']  ) / 2 ) 
+        opens = list( (data['askopen'] + data['bidopen']) / 2)
+        highs = list( (data['askhigh'] + data['bidhigh']) / 2)
+        lows = list( (data['asklow'] + data['bidlow']) / 2 )
         #ticks_no = data['tickqty']
         dates = data.axes[0].tolist()
         d = {'Open': opens, 'High': highs, 'Low': lows, 'Close': prices}
