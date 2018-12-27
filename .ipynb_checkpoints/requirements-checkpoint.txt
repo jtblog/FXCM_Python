@@ -1,5 +1,8 @@
+fxcmpy
+
 numpy
 pandas
 python-dateutil
 pytz
 six
+importlib
