@@ -1,5 +1,6 @@
 import pandas
-import sklearn
+import numpy
+from sklearn import *
 
 class Pair:
     
@@ -35,3 +36,46 @@ class Pair:
             self.update(dataframe)
         else:
             return(None)
+        
+    def multiple_linear_regression(self, dictn):
+        lm = linear_model.LinearRegression()
+        for key in dictn:
+            keys = set(dictn.keys())
+            excludes = set([self.sym])
+            diff = keys.difference(excludes)
+            x = pandas.DataFrame()
+            y = self.prices['Close'].tolist()
+
+            for ky in diff:
+                x[ky] = dictn.get(ky).prices['Close'].tolist()
+            model = lm.fit(x,y)
+
+            #R squared
+            rs = lm.score(x,y)
+            #Coefficients
+            bs = model.coef_.tolist()
+            #Intercept
+            intercept = model.intercept_
+            #Prediction (first)
+            pred = lm.predict(x)[0]
+
+            dez = {}
+            if(y[len(y)-1] > pred):
+                dez = {True: 'SELL', False: 'BUY'}
+            elif(y[len(y)-1] < pred):
+                dez = {True: 'BUY', False: 'SELL'}
+            dez[1.0] = dez[True]
+            dez[-1.0] = dez[False] 
+
+            df = pandas.DataFrame(index = [self.sym, dez[True]])
+            df['R_Squared'] = [rs, '']
+            df['Prediction'] = [pred, '' ]
+            df['Intercept'] = [intercept, '-']
+            hd = x.columns.tolist()
+            for s in hd:
+                c = bs[hd.index(s)]
+                sgn = numpy.sign(c)
+                df[s] = [c, dez[sgn] ]
+            
+            return(df)
+        
