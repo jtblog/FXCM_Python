@@ -27,7 +27,7 @@ class SharedObjects:
         #self.connection.connect()
         self.tradable_pairs = ['EUR/USD', 'USD/JPY', 'GBP/USD', 'USD/CHF', 
                   'AUD/USD', 'USD/CAD', 'NZD/USD', 'EUR/GBP', 
-                  'USD/ZAR', 'ZAR/JPY', 'Copper']
+                  'USD/ZAR', 'ZAR/JPY']
         
     def get_status(self):
         status = ""
@@ -66,3 +66,9 @@ class SharedObjects:
         except:
             print("Error: unable to start thread")
         return(None)
+    
+    def mergeall_byrow(self, dtfs):
+        dtf = pandas.DataFrame()
+        for key in dtfs:
+            dtf = pandas.concat([dtf, dtfs.get(key)])
+        return dtf

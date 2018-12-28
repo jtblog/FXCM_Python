@@ -67,15 +67,16 @@ class Pair:
             dez[1.0] = dez[True]
             dez[-1.0] = dez[False] 
 
-            df = pandas.DataFrame(index = [self.sym, dez[True]])
-            df['R_Squared'] = [rs, '']
-            df['Prediction'] = [pred, '' ]
-            df['Intercept'] = [intercept, '-']
+            df = pandas.DataFrame()
+            df[0] = [self.sym, '-', dez[True]]
+            df[1] = ['R_Squared', rs, '-']
+            df[2] = ['Prediction', pred, '-' ]
+            df[3] = ['Intercept', intercept, '-']
             hd = x.columns.tolist()
             for s in hd:
                 c = bs[hd.index(s)]
                 sgn = numpy.sign(c)
-                df[s] = [c, dez[sgn] ]
+                df[hd.index(s)+4] = [s, c, dez[sgn] ]
             
             return(df)
         
