@@ -21,6 +21,8 @@ class SharedObjects:
     pd = 'm1'
     size = 300
     pairs = dict()
+    coint_mat = pandas.DataFrame()
+    spreads = dict()
     
     def __init__(self, con):
         self.connection = con
@@ -67,8 +69,20 @@ class SharedObjects:
             print("Error: unable to start thread")
         return(None)
     
+    def set_var(self, dic, datf0):
+        self.spreads = dic
+        self.coint_mat = datf0
+    
     def mergeall_byrow(self, dtfs):
         dtf = pandas.DataFrame()
         for key in dtfs:
             dtf = pandas.concat([dtf, dtfs.get(key)])
         return dtf
+    
+    def pairwise_spread(self, a, b):
+        dff = pandas.DataFrame()
+        dff[a] = spreads.get(a)[a]
+        dff[b] = spreads.get(a)[b]
+        return(dff.plot(figsize =(15,10)))
+    
+    #def pairwise_plot(self, a, b):

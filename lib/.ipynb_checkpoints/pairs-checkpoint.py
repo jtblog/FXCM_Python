@@ -1,6 +1,8 @@
 import pandas
 import numpy
 from sklearn import *
+from statsmodels.tsa.stattools import adfuller
+import warnings
 
 class Pair:
     
@@ -79,4 +81,57 @@ class Pair:
                 df[hd.index(s)+4] = [s, c, dez[sgn] ]
             
             return(df)
+    
+    def reg(self, x, y):
+        regr = linear_model.LinearRegression()
+        x_constant = pandas.concat([x, pandas.Series([1]*len(x),index = x.index)], axis=1)
+        regr.fit(x_constant, y)    
+        beta = regr.coef_[0]
+        alpha = regr.intercept_
+        spread = y - x*beta - alpha
+        return spread
+    
+    def co_integration(self, prs):
+        adfmat = dict()
+        st_df = dict()
+        spread_df = dict()
+        for pr in prs:
+            adfmat[pr] = []
         
+        
+        for key in prs:
+            dtf = pandas.DataFrame()
+            yy = prs.get(key).prices['Close'].tolist()
+            y_np = numpy.array(yy)
+            standardized_y = ((y_np-y_np.mean())/y_np.std() ).tolist()
+            dtf[key] = standardized_y
+            spd = dict()
+
+            for ky in prs:
+                xx = prs.get(ky).prices['Close'].tolist()
+                x_np = numpy.array(xx)
+                standardized_x = ((x_np-x_np.mean())/x_np.std() ).tolist()
+                dtf[ky] = standardized_x
+                spread = self.reg(dtf[ky], dtf[key])
+                spd[ky] = spread
+                with warnings.catch_warnings():
+                    warnings.simplefilter("ignore")
+                    adf = adfuller(spread, maxlag=1)
+                adfmat.get(ky).append(adf[1])
+
+            st_df[key] = dtf
+            spread_df[key] = pandas.DataFrame(spd)
+            
+        adf_ps = pandas.DataFrame(index = list(adfmat.keys()))
+        for ke in adfmat:
+            adf_ps[ke] = adfmat.get(ke)
+        for key in spread_df:
+            spread_df[key] = pandas.DataFrame(spread_df.get(key))  
+        adf_ps = adf_ps.fillna(0.999)
+
+        adfmat = None
+        dtf = None
+        spd = None
+        spread = None
+        
+        return([spread_df, adf_ps])
