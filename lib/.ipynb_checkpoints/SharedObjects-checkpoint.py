@@ -16,6 +16,7 @@ A.print_classname = MethodType(print_classname, None, A)
 """
 import pandas
 import threading
+import numpy
 
 class SharedObjects:
     pd = 'm1'
@@ -23,6 +24,7 @@ class SharedObjects:
     pairs = dict()
     coint_mat = pandas.DataFrame()
     spreads = dict()
+    prs = dict()
     
     def __init__(self, con):
         self.connection = con
@@ -69,9 +71,10 @@ class SharedObjects:
             print("Error: unable to start thread")
         return(None)
     
-    def set_var(self, dic, datf0):
+    def set_var(self, dic, datf0, prs):
         self.spreads = dic
         self.coint_mat = datf0
+        self.prs = prs
     
     def mergeall_byrow(self, dtfs):
         dtf = pandas.DataFrame()
@@ -79,10 +82,32 @@ class SharedObjects:
             dtf = pandas.concat([dtf, dtfs.get(key)])
         return dtf
     
-    def pairwise_spread(self, a, b):
+    def pairwise_spreadplot(self, a, b):
         dff = pandas.DataFrame()
-        dff[a] = spreads.get(a)[a]
-        dff[b] = spreads.get(a)[b]
-        return(dff.plot(figsize =(15,10)))
+        dff[a] = self.spreads.get(a)[b]
+        dff['mean'] = dff[a].mean()
+        dff['upper'] = dff['mean'] + 1.96*dff[a].std()
+        dff['lower'] = dff['mean'] - 1.96*dff[a].std()
+        dff['buy'] = dff[a][((dff[a] < dff['lower']) & (dff[a].shift(1) > dff['lower']) | 
+                          (dff[a] <  dff['mean']) & (dff[a].shift(1) >  dff['mean']))]
+
+        dff['sell'] = dff[a][((dff[a] > dff['upper']) & (dff[a].shift(1) < dff['upper']) | 
+                           (dff[a] >  dff['mean']) & (dff[a].shift(1) <  dff['mean']))]
+        return(dff.plot(figsize =(17,10), style=['g', '--r', '--b', '--b', 'm^','cv']))
     
-    #def pairwise_plot(self, a, b):
+    def pairwise_spread(self, a):
+        dff = self.spreads.get(a)
+        dff = dff.drop(columns=[a])
+        return(dff)
+    
+    def pairwise_plot(self, a, b):
+        dtf = pandas.DataFrame()
+        yy = self.prs.get(a).prices['Close'].tolist()
+        y_np = numpy.array(yy)
+        standardized_y = ((y_np-y_np.mean())/y_np.std() ).tolist()
+        dtf[a] = standardized_y
+        xx = self.prs.get(b).prices['Close'].tolist()
+        x_np = numpy.array(xx)
+        standardized_x = ((x_np-x_np.mean())/x_np.std() ).tolist()
+        dtf[b] = standardized_x
+        return(dtf.plot(figsize =(17,10)))
