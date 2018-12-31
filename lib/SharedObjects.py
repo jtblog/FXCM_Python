@@ -21,10 +21,12 @@ import numpy
 class SharedObjects:
     pd = 'm1'
     size = 300
-    pairs = dict()
+    ipairs = []
     coint_mat = pandas.DataFrame()
     spreads = dict()
     prs = dict()
+    corr_mat = pandas.DataFrame()
+    dataset0 = pandas.DataFrame()
     
     def __init__(self, con):
         self.connection = con
@@ -75,6 +77,7 @@ class SharedObjects:
         self.spreads = dic
         self.coint_mat = datf0
         self.prs = prs
+        self.pair_selection()
     
     def mergeall_byrow(self, dtfs):
         dtf = pandas.DataFrame()
@@ -111,3 +114,30 @@ class SharedObjects:
         standardized_x = ((x_np-x_np.mean())/x_np.std() ).tolist()
         dtf[b] = standardized_x
         return(dtf.plot(figsize =(17,10)))
+    
+    def pair_selection(self):
+        prs = self.prs
+        self.ipairs = []
+        dtf = pandas.DataFrame()
+        for key in prs:
+            yy = prs.get(key).prices['Close'].tolist()
+            #y_np = numpy.array(yy)
+            #standardized_y = ((y_np-y_np.mean())/y_np.std() ).tolist()
+            dtf[key] = yy #standardized_y
+        self.dataset0 = dtf
+        self.corr_mat = dtf.corr(method='kendall').replace(1,0)
+        for key in prs.keys():
+            for ky in prs.keys():
+                if(self.corr_mat.loc[key][ky] >= 0.5 and 
+                   self.coint_mat.loc[key][ky] < 0.05 and 
+                   self.coint_mat.loc[ky][key] < 0.05 ):
+                    if ([ky, key] not in self.ipairs):
+                        self.ipairs.append([key,ky])
+                elif(self.corr_mat.loc[key][ky] <= -0.5 and 
+                     self.coint_mat.loc[key][ky] <0.05 and 
+                     self.coint_mat.loc[ky][key] < 0.05):
+                    if ([key, ky] not in self.ipairs):
+                        self.ipairs.append([ky,key])
+                else:
+                    None
+        return()
