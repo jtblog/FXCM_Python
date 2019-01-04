@@ -2,9 +2,13 @@ import pandas
 import numpy
 from sklearn import *
 from statsmodels.tsa.stattools import adfuller
+from scipy import stats
 import warnings
 
 class Pair:
+    
+    standardized_prices = []
+    sym = ''
     
     def __init__(self, symbol, dataframe):
         self.sym = symbol
@@ -30,14 +34,21 @@ class Pair:
             ts = self.prices.axes[0].tolist()[0]
             self.prices = self.prices.drop(ts)
             self.prices = pandas.concat([self.prices, dtf])
-        df = pandas.DataFrame()
-        return(None)
+        df = None
+        return
+    
+    def standardize_prices(self):
+        y_np = numpy.array(self.prices['Close'].tolist())
+        self.standardized_prices = ( (y_np-y_np.mean())/y_np.std() ).tolist()
+        return
+        
     
     def on_price_update(self, data, dataframe):
         if(data['Symbol'] == self.sym):
             self.update(dataframe)
         else:
-            return(None)
+            return
+        return
         
     def multiple_linear_regression(self, dictn):
         lm = linear_model.LinearRegression()
@@ -81,57 +92,36 @@ class Pair:
                 df[hd.index(s)+4] = [s, c, dez[sgn] ]
             
             return(df)
-    
-    def reg(self, x, y):
-        regr = linear_model.LinearRegression()
-        x_constant = pandas.concat([x, pandas.Series([1]*len(x),index = x.index)], axis=1)
-        regr.fit(x_constant, y)    
-        beta = regr.coef_[0]
-        alpha = regr.intercept_
-        spread = y - x*beta - alpha
-        return spread
-    
-    def co_integration(self, prs):
-        adfmat = dict()
-        st_df = dict()
-        spread_df = dict()
-        for pr in prs:
-            adfmat[pr] = []
         
+    def co_integration(self, prs, ct_mat, spreads):
+        ct_mat = ct_mat
+        spreads = spreads
+        adfs = dict()
+        spd = pandas.DataFrame()
         
-        for key in prs:
-            dtf = pandas.DataFrame()
-            yy = prs.get(key).prices['Close'].tolist()
-            y_np = numpy.array(yy)
-            standardized_y = ((y_np-y_np.mean())/y_np.std() ).tolist()
-            dtf[key] = standardized_y
-            spd = dict()
-
-            for ky in prs:
-                xx = prs.get(ky).prices['Close'].tolist()
-                x_np = numpy.array(xx)
-                standardized_x = ((x_np-x_np.mean())/x_np.std() ).tolist()
-                dtf[ky] = standardized_x
-                spread = self.reg(dtf[ky], dtf[key])
-                spd[ky] = spread
+        for ky in prs:
+            x = prs.get(ky).standardized_prices
+            y = prs.get(self.sym).standardized_prices
+            if(len(x) == len(y) and len(x) > 0 and len(y) > 0):
+                slope, intercept, r_value, p_value, std_err = stats.linregress(x, y)
+                s_x = list(map(lambda a: a*slope, x))
+                spread = [a - b for a, b in zip(y, s_x)]
+                spd[ky] = pandas.Series(spread)
                 with warnings.catch_warnings():
                     warnings.simplefilter("ignore")
                     adf = adfuller(spread, maxlag=1)
-                adfmat.get(ky).append(adf[1])
-
-            st_df[key] = dtf
-            spread_df[key] = pandas.DataFrame(spd)
+                adfs[ky] = adf[1]
+                
+        spreads[self.sym] = spd
             
-        adf_ps = pandas.DataFrame(index = list(adfmat.keys()))
-        for ke in adfmat:
-            adf_ps[ke] = adfmat.get(ke)
-        for key in spread_df:
-            spread_df[key] = pandas.DataFrame(spread_df.get(key))  
-        adf_ps = adf_ps.fillna(0.999)
-
-        adfmat = None
-        dtf = None
+        df0 = pandas.DataFrame(adfs, index = [self.sym])
+        if( (ct_mat is not None and self.sym in ct_mat.index) is True):
+            ct_mat.loc[self.sym] = df0.loc[self.sym]
+        else:
+            ct_mat = pandas.concat([ct_mat, df0], sort=False)
+        
+        adfs = None
         spd = None
         spread = None
         
-        return([spread_df, adf_ps])
+        return([ct_mat, spreads])

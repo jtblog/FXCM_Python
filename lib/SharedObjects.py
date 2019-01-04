@@ -17,6 +17,7 @@ A.print_classname = MethodType(print_classname, None, A)
 import pandas
 import threading
 import numpy
+from scipy import stats
 
 class SharedObjects:
     pd = 'm1'
@@ -25,8 +26,11 @@ class SharedObjects:
     coint_mat = pandas.DataFrame()
     spreads = dict()
     prs = dict()
+    quantity = 2
     corr_mat = pandas.DataFrame()
     dataset0 = pandas.DataFrame()
+    traded_currencies = []
+    automate = False
     
     def __init__(self, con):
         self.connection = con
@@ -34,6 +38,9 @@ class SharedObjects:
         self.tradable_pairs = ['EUR/USD', 'USD/JPY', 'GBP/USD', 'USD/CHF', 
                   'AUD/USD', 'USD/CAD', 'NZD/USD', 'EUR/GBP', 
                   'USD/ZAR', 'ZAR/JPY']
+        self.coint_mat = pandas.DataFrame()
+        self.spreads = dict()
+        return
         
     def get_status(self):
         status = ""
@@ -60,6 +67,7 @@ class SharedObjects:
     
     def stream_data(self, sym, handler):
         self.connection.subscribe_market_data(sym, add_callbacks = handler)
+        self.automate = True
         return(None)
     
     def unstream_data(self):
@@ -72,12 +80,6 @@ class SharedObjects:
         except:
             print("Error: unable to start thread")
         return(None)
-    
-    def set_var(self, dic, datf0, prs):
-        self.spreads = dic
-        self.coint_mat = datf0
-        self.prs = prs
-        self.pair_selection()
     
     def mergeall_byrow(self, dtfs):
         dtf = pandas.DataFrame()
@@ -98,6 +100,13 @@ class SharedObjects:
                            (dff[a] >  dff['mean']) & (dff[a].shift(1) <  dff['mean']))]
         return(dff.plot(figsize =(17,10), style=['g', '--r', '--b', '--b', 'm^','cv']))
     
+    def update(self, prs, coint_mat, spreads):
+        self.prs = prs
+        self.coint_mat = coint_mat.fillna(0.999)
+        self.spreads = spreads
+        self.pair_selection()
+        return
+    
     def pairwise_spread(self, a):
         dff = self.spreads.get(a)
         dff = dff.drop(columns=[a])
@@ -105,14 +114,10 @@ class SharedObjects:
     
     def pairwise_plot(self, a, b):
         dtf = pandas.DataFrame()
-        yy = self.prs.get(a).prices['Close'].tolist()
-        y_np = numpy.array(yy)
-        standardized_y = ((y_np-y_np.mean())/y_np.std() ).tolist()
-        dtf[a] = standardized_y
-        xx = self.prs.get(b).prices['Close'].tolist()
-        x_np = numpy.array(xx)
-        standardized_x = ((x_np-x_np.mean())/x_np.std() ).tolist()
-        dtf[b] = standardized_x
+        yy = self.prs.get(a).standardized_prices
+        dtf[a] = yy
+        xx = self.prs.get(b).standardized_prices
+        dtf[b] = xx
         return(dtf.plot(figsize =(17,10)))
     
     def pair_selection(self):
@@ -120,24 +125,73 @@ class SharedObjects:
         self.ipairs = []
         dtf = pandas.DataFrame()
         for key in prs:
-            yy = prs.get(key).prices['Close'].tolist()
-            #y_np = numpy.array(yy)
-            #standardized_y = ((y_np-y_np.mean())/y_np.std() ).tolist()
-            dtf[key] = yy #standardized_y
+            yy = prs.get(key).prices
+            dtf[key] = pandas.Series(yy)
         self.dataset0 = dtf
-        self.corr_mat = dtf.corr(method='kendall').replace(1,0)
+        self.corr_mat = dtf.corr(method='kendall').replace(1, 0)
         for key in prs.keys():
             for ky in prs.keys():
-                if(self.corr_mat.loc[key][ky] >= 0.5 and 
-                   self.coint_mat.loc[key][ky] < 0.05 and 
-                   self.coint_mat.loc[ky][key] < 0.05 ):
-                    if ([ky, key] not in self.ipairs):
-                        self.ipairs.append([key,ky])
-                elif(self.corr_mat.loc[key][ky] <= -0.5 and 
-                     self.coint_mat.loc[key][ky] <0.05 and 
+                #if(self.corr_mat.loc[key][ky] >= 0.5 and 
+                #   self.coint_mat.loc[key][ky] < 0.05 and 
+                #   self.coint_mat.loc[ky][key] < 0.05 ):
+                #    if ([ky, key] not in self.ipairs):
+                #        self.ipairs.append([key,ky])
+                if(self.corr_mat.loc[key][ky] <= -0.5 and 
+                     self.coint_mat.loc[key][ky] < 0.05 and 
                      self.coint_mat.loc[ky][key] < 0.05):
                     if ([key, ky] not in self.ipairs):
-                        self.ipairs.append([ky,key])
+                        self.ipairs.append([key,ky])
                 else:
-                    None
-        return()
+                    return
+        if(self.automate == True):
+            self.signal()
+        return
+    
+    def signal(self):
+        signals = []
+        for pr in self.ipairs:
+            dff = pandas.DataFrame()
+            dff['spread'] = self.spreads.get(pr[0])[pr[1]]
+            dff['mean'] = dff['spread'].mean()
+            dff['upper'] = dff['mean'] + 1.96*dff['spread'].std()
+            dff['lower'] = dff['mean'] - 1.96*dff['spread'].std()
+            index = len(dff.index.values) - 1 
+            
+            y = self.prs.get(pr[0]).standardized_prices()
+            x = self.prs.get(pr[1]).standardized_prices()
+            b = stats.linregress(x, y).slope
+            
+            if(dff['spread'][index] < dff['lower'][index]):
+                signals.append({pr[0]: ['Buy', 1], pr[1]: ['Sell', abs(b)]})
+                self.Buy(pr[0], self.quantity * 1)
+                self.Sell(pr[1], self.quantity * abs(b))
+            elif(dff['spread'][index] > dff['upper'][index]):
+                signals.append({pr[0]: ['Sell', 1], pr[1]: ['Buy', abs(b)]})
+                self.Sell(pr[0], self.quantity * 1)
+                self.Buy(pr[1], self.quantity * abs(b))
+        return(signals)
+            
+    def Buy(self, symbol, amount, limit=None):
+        self.check()
+        if((symbol in self.traded_currencies) is False):
+            self.connection.create_market_buy_order(symbol, amount)
+        return
+    
+    def Sell(self, symbol, amount, limit=None):
+        self.check()
+        if((symbol in self.traded_currencies) is False):
+            self.connection.create_market_sell_order(symbol, amount)
+        return
+    
+    def check(self):
+        df = self.connection.get_open_positions().T
+        if(len(df.index) > 0):
+            tradeIds = df.loc['tradeId'].tolist()
+            limits = df.loc['limit'].tolist()
+            self.traded_currencies = df.loc['currency'].tolist()
+        
+            for lim in limits:
+                if(lim == 0):
+                    tradeId = tradeIds[limits.index(lim)]
+                    self.connection.change_trade_stop_limit(tradeId, is_in_pips=True, is_stop=False, rate=0.1)
+        return
