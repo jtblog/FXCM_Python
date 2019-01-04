@@ -125,7 +125,7 @@ class SharedObjects:
         self.ipairs = []
         dtf = pandas.DataFrame()
         for key in prs:
-            yy = prs.get(key).prices
+            yy = prs.get(key).standardized_prices
             dtf[key] = pandas.Series(yy)
         self.dataset0 = dtf
         self.corr_mat = dtf.corr(method='kendall').replace(1, 0)
