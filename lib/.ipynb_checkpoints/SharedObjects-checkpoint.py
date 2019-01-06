@@ -31,6 +31,7 @@ class SharedObjects:
     dataset0 = pandas.DataFrame()
     traded_currencies = []
     automate = False
+    corr_bd = 0.3
     
     def __init__(self, con):
         self.connection = con
@@ -40,6 +41,7 @@ class SharedObjects:
                   'USD/ZAR', 'ZAR/JPY']
         self.coint_mat = pandas.DataFrame()
         self.spreads = dict()
+        self.corr_bd = 0.3
         return
         
     def get_status(self):
@@ -91,8 +93,8 @@ class SharedObjects:
         dff = pandas.DataFrame()
         dff[a] = self.spreads.get(a)[b]
         dff['mean'] = dff[a].mean()
-        dff['upper'] = dff['mean'] + 1.96*dff[a].std()
-        dff['lower'] = dff['mean'] - 1.96*dff[a].std()
+        dff['upper'] = dff['mean'] + (2.05*dff[a].std())
+        dff['lower'] = dff['mean'] - (2.05*dff[a].std())
         dff['buy'] = dff[a][((dff[a] < dff['lower']) & (dff[a].shift(1) > dff['lower']) | 
                           (dff[a] <  dff['mean']) & (dff[a].shift(1) >  dff['mean']))]
 
@@ -131,12 +133,12 @@ class SharedObjects:
         self.corr_mat = dtf.corr(method='kendall').replace(1, 0)
         for key in prs.keys():
             for ky in prs.keys():
-                #if(self.corr_mat.loc[key][ky] >= 0.5 and 
+                #if(self.corr_mat.loc[key][ky] >= self.corr_bd and 
                 #   self.coint_mat.loc[key][ky] < 0.05 and 
                 #   self.coint_mat.loc[ky][key] < 0.05 ):
                 #    if ([ky, key] not in self.ipairs):
                 #        self.ipairs.append([key,ky])
-                if(self.corr_mat.loc[key][ky] <= -0.5 and 
+                if(self.corr_mat.loc[key][ky] <= -self.corr_bd and 
                      self.coint_mat.loc[key][ky] < 0.05 and 
                      self.coint_mat.loc[ky][key] < 0.05):
                     if ([key, ky] not in self.ipairs):
@@ -153,8 +155,8 @@ class SharedObjects:
             dff = pandas.DataFrame()
             dff['spread'] = self.spreads.get(pr[0])[pr[1]]
             dff['mean'] = dff['spread'].mean()
-            dff['upper'] = dff['mean'] + 1.96*dff['spread'].std()
-            dff['lower'] = dff['mean'] - 1.96*dff['spread'].std()
+            dff['upper'] = dff['mean'] + (2.05*dff['spread'].std())
+            dff['lower'] = dff['mean'] - (2.05*dff['spread'].std())
             index = len(dff.index.values) - 1 
             
             y = self.prs.get(pr[0]).standardized_prices()
