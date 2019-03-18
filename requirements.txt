@@ -1,9 +1,13 @@
 fxcmpy
 sklearn
-
 numpy
 pandas
 python-dateutil
-pytz
-six
 importlib
+scipy
+statsmodels
+matplotlib
+ipywidgets
+pymysql 
+pynverse
+threading
