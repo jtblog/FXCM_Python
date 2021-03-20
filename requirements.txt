@@ -8,7 +8,7 @@ matplotlib
 importlib
 numpy
 pandas
-schedule
+seaborn
 
 
 
