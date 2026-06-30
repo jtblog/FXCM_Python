@@ -2,7 +2,7 @@ fxcmpy
 sklearn
 scipy
 python-socketio==4.4.0
-python-engineio==3.9.0
+python-engineio==4.13.2
 statsmodels
 matplotlib
 importlib
